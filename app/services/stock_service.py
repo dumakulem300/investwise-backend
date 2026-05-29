@@ -3,6 +3,9 @@ from app.services.real_stock_fetcher import BLUE_CHIPS
 from app.database import db
 from app.models import PREDICTIONS_COLLECTION
 
+# Alias for compatibility with other modules (e.g., news.py)
+PH_BLUE_CHIPS = BLUE_CHIPS
+
 def get_latest_predictions_from_firestore() -> list:
     """Retrieve today's predictions from Firestore."""
     today_str = datetime.utcnow().strftime("%Y-%m-%d")
@@ -20,7 +23,6 @@ def get_latest_predictions_from_firestore() -> list:
                 "explanation": data.get("explanation", "No data")
             })
         else:
-            # If no prediction for today, try yesterday's as fallback
             yesterday = (datetime.utcnow().replace(hour=0, minute=0, second=0) - timedelta(days=1)).strftime("%Y-%m-%d")
             doc_yest = db.collection(PREDICTIONS_COLLECTION).document(f"{symbol}_{yesterday}").get()
             if doc_yest.exists:
