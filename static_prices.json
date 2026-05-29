@@ -1,0 +1,12 @@
+{
+  "AC": {"price": 436.60, "change": 0.35},
+  "SM": {"price": 920.30, "change": -0.12},
+  "BDO": {"price": 142.80, "change": 0.82},
+  "JFC": {"price": 260.00, "change": -0.45},
+  "TEL": {"price": 1250.00, "change": 0.20},
+  "MER": {"price": 345.00, "change": -0.33},
+  "GLO": {"price": 1800.00, "change": 0.15},
+  "ALI": {"price": 28.50, "change": -0.10},
+  "AEV": {"price": 58.00, "change": 0.40},
+  "MBT": {"price": 65.00, "change": -0.25}
+}
