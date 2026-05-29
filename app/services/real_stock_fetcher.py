@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# Ensure BLUE_CHIPS is defined at module level
 BLUE_CHIPS = ["AC", "SM", "BDO", "JFC", "TEL", "MER", "GLO", "ALI", "AEV", "MBT"]
 
 def get_real_stock_price(symbol):
@@ -12,11 +13,10 @@ def get_real_stock_price(symbol):
     try:
         resp = requests.get(url, timeout=10)
         data = resp.json()
-        # The correct key is "stocks" (list)
-        if data and "stocks" in data and data["stocks"]:
-            stock_data = data["stocks"][0]
+        if data and "stock" in data and data["stock"]:
+            stock_data = data["stock"][0]
             price = float(stock_data["price"]["amount"])
-            percent_change = float(stock_data["percentChange"])
+            percent_change = float(stock_data["percent_change"])
             return price, percent_change, True
         else:
             print(f"No data for {symbol}")
