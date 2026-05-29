@@ -1,15 +1,27 @@
 import os
+import sys
 import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.database import get_db
-from app.routers import stocks, news, lessons, subscription, admin
-from app.services.scheduler import start_scheduler, stop_scheduler, manual_refresh
-from app.services.stock_service import get_latest_predictions_from_firestore
 
-logging.basicConfig(level=logging.INFO)
+# Configure logging early
+logging.basicConfig(level=logging.INFO, stream=sys.stdout)
 logger = logging.getLogger(__name__)
+
+# Log startup immediately
+logger.info("Starting InvestWise API...")
+
+# Import dependencies after logging setup to catch import errors
+try:
+    from app.database import get_db
+    from app.routers import stocks, news, lessons, subscription, admin
+    from app.services.scheduler import start_scheduler, stop_scheduler, manual_refresh
+    from app.services.stock_service import get_latest_predictions_from_firestore
+    logger.info("All modules imported successfully")
+except Exception as e:
+    logger.error(f"Import error: {e}", exc_info=True)
+    sys.exit(1)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -19,19 +31,19 @@ async def lifespan(app: FastAPI):
         db.collection("_test").document("ping").set({"ts": "startup"})
         logger.info("Firestore connection verified")
     except Exception as e:
-        logger.error(f"Firestore connection failed: {e}")
+        logger.error(f"Firestore connection failed: {e}", exc_info=True)
     try:
         start_scheduler()
         logger.info("Scheduler started")
     except Exception as e:
-        logger.error(f"Scheduler start failed: {e}")
+        logger.error(f"Scheduler start failed: {e}", exc_info=True)
     try:
         predictions = get_latest_predictions_from_firestore()
         if not predictions or all(p.get("price") is None for p in predictions):
             logger.info("No predictions found, running initial refresh")
             manual_refresh()
     except Exception as e:
-        logger.error(f"Initial refresh failed: {e}")
+        logger.error(f"Initial refresh failed: {e}", exc_info=True)
     yield
     logger.info("Shutting down InvestWise API")
     stop_scheduler()
@@ -50,6 +62,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Include routers (they are already imported)
 app.include_router(stocks.router)
 app.include_router(news.router)
 app.include_router(lessons.router)
