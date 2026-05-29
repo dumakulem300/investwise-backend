@@ -8,7 +8,9 @@ from app.services.payment_service import (
 )
 from app.config import settings
 import base64
+import logging
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/subscription", tags=["subscription"])
 
 PLAN_PRICES = {
@@ -40,8 +42,12 @@ async def my_subscription(
     user_id: str = Depends(get_current_user_uid),
     user_email: str = Depends(get_current_user_email)
 ):
-    active = check_subscription_active(user_id, user_email)
-    if active and user_email in settings.ADMIN_EMAILS:
+    logger.info(f"Checking subscription for email: {user_email}")
+    # Normalize admin emails (case-insensitive)
+    admin_emails = [email.strip().lower() for email in settings.ADMIN_EMAILS if email.strip()]
+    is_admin = user_email.lower() in admin_emails
+    if is_admin:
+        logger.info(f"Admin detected: {user_email}")
         return {
             "active": True,
             "plan": "admin_premium",
@@ -49,7 +55,9 @@ async def my_subscription(
             "expiry_date": "2099-12-31T23:59:59",
             "admin": True
         }
-    sub = get_user_subscription(user_id)
+    # Check regular subscription
+    active = check_subscription_active(user_id, user_email)
+    sub = get_user_subscription(user_id) if not active else None
     if not sub:
         return {"active": False, "subscription": None}
     return {
@@ -65,5 +73,9 @@ async def subscription_status(
     user_id: str = Depends(get_current_user_uid),
     user_email: str = Depends(get_current_user_email)
 ):
+    admin_emails = [email.strip().lower() for email in settings.ADMIN_EMAILS if email.strip()]
+    is_admin = user_email.lower() in admin_emails
+    if is_admin:
+        return {"active": True}
     active = check_subscription_active(user_id, user_email)
     return {"active": active}
