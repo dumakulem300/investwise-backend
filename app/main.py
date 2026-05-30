@@ -48,7 +48,8 @@ async def lifespan(app: FastAPI):
     logger.info("Shutting down InvestWise API")
     stop_scheduler()
 
-app = FastAPI(title="InvestWise API", lifespan=lifespan)
+# FastAPI with redirect_slashes=False to prevent CORS loss on redirects
+app = FastAPI(title="InvestWise API", lifespan=lifespan, redirect_slashes=False)
 
 # CORS – allow both local development and live frontend origins
 app.add_middleware(
