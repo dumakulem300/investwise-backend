@@ -2,13 +2,14 @@ import yfinance as yf
 import pandas as pd
 import logging
 from datetime import datetime, timedelta
-from app.database import db
+from app.database import db  # <-- FIX: added missing import
 from app.models import PREDICTIONS_COLLECTION
 
 logger = logging.getLogger(__name__)
 
 BLUE_CHIPS = ["AC", "SM", "BDO", "JFC", "TEL", "MER", "GLO", "ALI", "AEV", "MBT"]
 SIGNAL_VERSION = "v1_technical_only"
+MIN_ROWS_REQUIRED = 42  # 40 weeks for SMA40 + 2 buffer
 
 def fetch_weekly_data(symbol: str, weeks: int = 52):
     """Fetch weekly OHLCV data from yfinance."""
@@ -27,7 +28,7 @@ def generate_mock_weekly(symbol: str, weeks: int):
     n = len(dates)
     base = 100 + (pd.RangeIndex(n) * 0.5) + (pd.RangeIndex(n) ** 2 * 0.01)
     noise_factor = hash(symbol) % 100 / 1000
-    prices = (base * (1 + 0.1 * noise_factor)).values  # <-- .values strips the index
+    prices = (base * (1 + 0.1 * noise_factor)).values
     df = pd.DataFrame({
         'Open': prices,
         'High': prices * 1.02,
@@ -136,6 +137,25 @@ def generate_weekly_signal(symbol):
     if df.empty:
         logger.error(f"No data for {symbol}")
         return None
+
+    # Minimum row guard: need enough history for indicators (especially SMA40)
+    if len(df) < MIN_ROWS_REQUIRED:
+        logger.warning(f"{symbol}: only {len(df)} weeks, need {MIN_ROWS_REQUIRED}")
+        return {
+            "symbol": symbol,
+            "signal": "INSUFFICIENT_DATA",
+            "explanation": f"Not enough historical data ({len(df)} weeks available, need {MIN_ROWS_REQUIRED})",
+            "signal_version": SIGNAL_VERSION,
+            "price": None,
+            "change_percent": None,
+            "trend": None,
+            "momentum": None,
+            "volume_ok": False,
+            "generated_at": datetime.utcnow(),
+            "raw_signal": None,
+            "persistent_signal": None
+        }
+
     volume_ok = check_volume_guard(df)
     if not volume_ok:
         return {
@@ -152,6 +172,7 @@ def generate_weekly_signal(symbol):
             "raw_signal": None,
             "persistent_signal": None
         }
+
     # Get latest values
     close = df['Close'].iloc[-1]
     prev_close = df['Close'].iloc[-2] if len(df) > 1 else close
